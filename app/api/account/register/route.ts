@@ -1,20 +1,31 @@
-import joi from 'joi';
+import joi from "joi";
 
-import { usersRepo } from '_helpers/server';
-import { apiHandler } from '_helpers/server/api';
+import { NextRequest, NextResponse } from "next/server";
+import { usersRepo } from "_helpers/server";
+import {
+    errorHandler,
+    jwtMiddleware,
+    validateMiddleware
+} from "_helpers/server/api";
 
-module.exports = apiHandler({
-    POST: register
-});
+export async function POST(req: NextRequest) {
+    try {
+        // global middleware
+        await jwtMiddleware(req);
+        const schema = joi.object({
+            firstName: joi.string().required(),
+            lastName: joi.string().required(),
+            username: joi.string().required(),
+            password: joi.string().min(6).required()
+        });
+        await validateMiddleware(req, schema);
 
-async function register(req: Request) {
-    const body = await req.json();
-    await usersRepo.create(body);
+        // route handler
+        const body = await req.json();
+        await usersRepo.create(body);
+        return NextResponse.json({});
+    } catch (err: any) {
+        // global error handler
+        return errorHandler(err);
+    }
 }
-
-register.schema = joi.object({
-    firstName: joi.string().required(),
-    lastName: joi.string().required(),
-    username: joi.string().required(),
-    password: joi.string().min(6).required(),
-});
